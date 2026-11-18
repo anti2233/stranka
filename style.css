@@ -43,6 +43,9 @@ p { margin: 0; }
 .btn--small { font-size: 15px; padding: 12px 22px; min-height: 44px; }
 .btn:disabled { opacity: .6; cursor: wait; }
 
+/* --- Pásik „ukážkový web“ --- */
+.demo-bar { background: #2A2E28; color: var(--soft); text-align: center; font-size: 13px; padding: 8px 16px; letter-spacing: .02em; }
+
 /* --- Ukazovateľ skrolovania --- */
 .progress { display: none; position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); transform-origin: 0 50%; z-index: 40; }
 
@@ -86,7 +89,7 @@ p { margin: 0; }
 .prices { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: stretch; }
 .price { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 40px; display: flex; flex-direction: column; gap: 20px; }
 .price h3 { font-size: 22px; }
-.price .amount { font-family: var(--font-head); font-size: 44px; font-weight: 700; }
+.price .amount { font-family: var(--font-head); font-size: 32px; font-weight: 700; }
 .price p { color: var(--muted); line-height: 1.6; }
 .price ul { margin: 0; padding-left: 20px; color: var(--soft); line-height: 1.9; }
 .price--featured { background: var(--accent); color: var(--bg); border: 0; }

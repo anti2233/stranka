@@ -82,7 +82,7 @@ async function sendForm(form, data, messages) {
   } catch (err) {
     console.error('Formulár sa neodoslal:', err);
     status.className = 'form-status err';
-    status.textContent = 'Správu sa nepodarilo odoslať. Skúste to znova alebo mi napíšte priamo na svatikanton348@gmail.com.';
+    status.textContent = 'Správu sa nepodarilo odoslať. Skúste to prosím o chvíľu znova.';
     return false;
   } finally {
     clearTimeout(timer);
@@ -112,7 +112,7 @@ function showError(form, text) {
       Meno: meno,
       email: email,
       Správa: sprava
-    }, { ok: 'Ďakujem! Správa bola odoslaná, ozvem sa do 24 hodín.' });
+    }, { ok: 'Ďakujem! Správa bola odoslaná, ozvem sa čo najskôr.' });
   });
 })();
 
