@@ -55,12 +55,20 @@ async function sendForm(form, data, messages) {
   status.textContent = 'Odosielam…';
   button.disabled = true;
 
+  const payload = { ...data, _template: 'table', _honey: honey ? honey.value : '' };
+
+  // Keď služba neodpovie do 12 sekúnd, prestaneme čakať a použijeme záložné odoslanie
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+
   try {
     const res = await fetch(FORM_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ ...data, _template: 'table', _honey: honey ? honey.value : '' })
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+    clearTimeout(timer);
     const json = await res.json().catch(() => ({}));
     const ok = res.ok && String(json.success) === 'true';
 
@@ -78,13 +86,44 @@ async function sendForm(form, data, messages) {
     }
     throw new Error(json.message || 'Chyba ' + res.status);
   } catch (err) {
-    status.className = 'form-status err';
-    status.textContent = 'Správu sa nepodarilo odoslať. Skúste to znova alebo mi napíšte priamo na svatikanton348@gmail.com.';
+    clearTimeout(timer);
+    // Záložný spôsob: klasické odoslanie formulára (stránka sa na chvíľu presmeruje na FormSubmit a vráti sa späť)
+    status.className = 'form-status';
+    status.textContent = 'Odosielam inou cestou…';
+    classicSubmit(payload);
     return false;
   } finally {
     button.disabled = false;
   }
 }
+
+function classicSubmit(payload) {
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = FORM_ENDPOINT.replace('/ajax/', '/');
+  const back = location.href.split('#')[0].split('?')[0];
+  const fields = { ...payload, _next: back + '?odoslane=1#kontakt', _captcha: 'false' };
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    f.appendChild(input);
+  });
+  document.body.appendChild(f);
+  f.submit();
+}
+
+// Po návrate zo záložného odoslania ukážeme poďakovanie
+(function afterClassicSubmit() {
+  if (!/[?&]odoslane=1/.test(location.search)) return;
+  const status = document.querySelector('#contact-form .form-status');
+  if (status) {
+    status.className = 'form-status ok';
+    status.textContent = 'Ďakujem! Správa bola odoslaná, ozvem sa do 24 hodín.';
+  }
+  history.replaceState(null, '', location.pathname + '#kontakt');
+})();
 
 function showError(form, text) {
   const status = form.querySelector('.form-status');
