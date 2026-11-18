@@ -2,8 +2,10 @@
    Anton Web – správanie stránky
    ========================================================== */
 
-// Kam chodia správy z formulárov (služba FormSubmit.co – zadarmo, bez registrácie)
-const FORM_ENDPOINT = 'https://formsubmit.co/ajax/svatikanton348@gmail.com';
+// Kam chodia správy z formulárov: služba Web3Forms (web3forms.com).
+// ACCESS_KEY je verejný kľúč – hovorí len to, komu sa majú správy posielať.
+const FORM_ENDPOINT = 'https://api.web3forms.com/submit';
+const ACCESS_KEY = '0d19197a-3abe-4820-b041-3eaef6e15293';
 
 // Schválené recenzie. Keď ti príde recenzia e-mailom a chceš ju zverejniť,
 // pridaj ju sem, napríklad:
@@ -45,85 +47,48 @@ function hviezdicky(n) {
   document.querySelectorAll('main section[id]').forEach((s) => observer.observe(s));
 })();
 
-/* ---------- 2. Odoslanie formulára cez FormSubmit ---------- */
+/* ---------- 2. Odoslanie formulára cez Web3Forms ---------- */
 async function sendForm(form, data, messages) {
   const status = form.querySelector('.form-status');
   const button = form.querySelector('button[type="submit"]');
-  const honey = form.querySelector('[name="_honey"]');
+  const honey = form.querySelector('[name="botcheck"]');
+
+  // Ochrana pred robotmi: skryté políčko vyplní len robot
+  if (honey && honey.checked) return false;
 
   status.className = 'form-status';
   status.textContent = 'Odosielam…';
   button.disabled = true;
 
-  const payload = { ...data, _template: 'table', _honey: honey ? honey.value : '' };
-
-  // Keď služba neodpovie do 12 sekúnd, prestaneme čakať a použijeme záložné odoslanie
+  // Keď služba neodpovie do 15 sekúnd, prestaneme čakať
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 15000);
 
   try {
     const res = await fetch(FORM_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ access_key: ACCESS_KEY, from_name: 'Web Anton Web', ...data }),
       signal: controller.signal
     });
-    clearTimeout(timer);
     const json = await res.json().catch(() => ({}));
-    const ok = res.ok && String(json.success) === 'true';
-
-    if (ok) {
+    if (res.ok && json.success) {
       status.className = 'form-status ok';
       status.textContent = messages.ok;
       form.reset();
       return true;
     }
-    if (json.message && /activat/i.test(json.message)) {
-      // Pri úplne prvom odoslaní treba formulár aktivovať odkazom v e-maile
-      status.className = 'form-status err';
-      status.textContent = 'Formulár ešte nie je aktivovaný. Majiteľ webu dostal e-mail s aktivačným odkazom.';
-      return false;
-    }
     throw new Error(json.message || 'Chyba ' + res.status);
   } catch (err) {
-    clearTimeout(timer);
-    // Záložný spôsob: klasické odoslanie formulára (stránka sa na chvíľu presmeruje na FormSubmit a vráti sa späť)
-    status.className = 'form-status';
-    status.textContent = 'Odosielam inou cestou…';
-    classicSubmit(payload);
+    console.error('Formulár sa neodoslal:', err);
+    status.className = 'form-status err';
+    status.textContent = 'Správu sa nepodarilo odoslať. Skúste to znova alebo mi napíšte priamo na svatikanton348@gmail.com.';
     return false;
   } finally {
+    clearTimeout(timer);
     button.disabled = false;
   }
 }
-
-function classicSubmit(payload) {
-  const f = document.createElement('form');
-  f.method = 'POST';
-  f.action = FORM_ENDPOINT.replace('/ajax/', '/');
-  const back = location.href.split('#')[0].split('?')[0];
-  const fields = { ...payload, _next: back + '?odoslane=1#kontakt', _captcha: 'false' };
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    f.appendChild(input);
-  });
-  document.body.appendChild(f);
-  f.submit();
-}
-
-// Po návrate zo záložného odoslania ukážeme poďakovanie
-(function afterClassicSubmit() {
-  if (!/[?&]odoslane=1/.test(location.search)) return;
-  const status = document.querySelector('#contact-form .form-status');
-  if (status) {
-    status.className = 'form-status ok';
-    status.textContent = 'Ďakujem! Správa bola odoslaná, ozvem sa do 24 hodín.';
-  }
-  history.replaceState(null, '', location.pathname + '#kontakt');
-})();
 
 function showError(form, text) {
   const status = form.querySelector('.form-status');
@@ -143,7 +108,7 @@ function showError(form, text) {
     if (!meno || !email || !sprava) return showError(form, 'Vyplňte prosím meno, e-mail aj správu.');
     if (!form.email.checkValidity()) return showError(form, 'Skontrolujte prosím e-mailovú adresu.');
     sendForm(form, {
-      _subject: 'Nový dopyt z webu – ' + meno,
+      subject: 'Nový dopyt z webu – ' + meno,
       Meno: meno,
       email: email,
       Správa: sprava
@@ -206,7 +171,7 @@ function showError(form, text) {
     const text = form.recenzia.value.trim();
     if (!meno || !text) return showError(form, 'Vyplňte prosím meno aj text recenzie.');
     const ok = await sendForm(form, {
-      _subject: 'Nová recenzia na webe – ' + meno + ' (' + rating + '/5)',
+      subject: 'Nová recenzia na webe – ' + meno + ' (' + rating + '/5)',
       Meno: meno,
       Firma: firma || '–',
       Hodnotenie: rating + ' z 5',
